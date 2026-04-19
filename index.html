@@ -277,6 +277,11 @@
               return;
             }
 
+            if (!input.value.trim()) {
+              showStatus("Please enter some text first!", true);
+              return;
+            }
+
             var out = raw;
             if (action === "uppercase") out = raw.toUpperCase();
             else if (action === "lowercase") out = raw.toLowerCase();

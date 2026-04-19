@@ -23,14 +23,13 @@
       rel="stylesheet"
     />
   </head>
+
   <body
     class="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 to-violet-100/80 font-sans text-slate-800 antialiased"
   >
     <div class="mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-8 sm:py-12">
       <header class="mb-8 text-center sm:mb-10">
-        <p
-          class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600/90"
-        >
+        <p class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600/90">
           Text tools
         </p>
         <h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
@@ -44,9 +43,25 @@
       <main
         class="flex flex-1 flex-col rounded-2xl border border-white/60 bg-white/80 p-5 shadow-xl shadow-indigo-950/5 backdrop-blur-sm sm:p-8"
       >
-        <label for="input" class="mb-2 text-sm font-medium text-slate-700">
-          Your text
-        </label>
+        <div class="mb-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <label for="input" class="text-sm font-medium text-slate-700">
+            Your text
+          </label>
+
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+            <span>
+              <span class="font-semibold text-slate-700" id="wordCount">0</span> words
+            </span>
+            <span>
+              <span class="font-semibold text-slate-700" id="charCount">0</span> chars
+            </span>
+            <span>
+              <span class="font-semibold text-slate-700" id="charCountNoSpaces">0</span>
+              chars (no spaces)
+            </span>
+          </div>
+        </div>
+
         <textarea
           id="input"
           rows="8"
@@ -137,7 +152,12 @@
             </svg>
             Copy to clipboard
           </button>
-          <p id="status" class="text-center text-sm text-slate-500 sm:order-1 sm:text-left" aria-live="polite"></p>
+
+          <p
+            id="status"
+            class="text-center text-sm text-slate-500 sm:order-1 sm:text-left"
+            aria-live="polite"
+          ></p>
         </div>
       </main>
 
@@ -183,17 +203,25 @@
 
     <script>
       (function () {
-        const input = document.getElementById("input");
-        const copyBtn = document.getElementById("copyBtn");
-        const status = document.getElementById("status");
-        const toast = document.getElementById("toast");
+        var input = document.getElementById("input");
+        var copyBtn = document.getElementById("copyBtn");
+        var status = document.getElementById("status");
+        var toast = document.getElementById("toast");
+
+        var wordCountEl = document.getElementById("wordCount");
+        var charCountEl = document.getElementById("charCount");
+        var charCountNoSpacesEl = document.getElementById("charCountNoSpaces");
+
         var toastHideTimer;
 
         function toTitleCase(text) {
-          return text.split(/(\s+)/).map(function (part) {
-            if (/^\s+$/.test(part) || part.length === 0) return part;
-            return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
-          }).join("");
+          return text
+            .split(/(\s+)/)
+            .map(function (part) {
+              if (/^\s+$/.test(part) || part.length === 0) return part;
+              return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+            })
+            .join("");
         }
 
         function toSentenceCase(text) {
@@ -201,6 +229,19 @@
           return lower.replace(/(^|[.!?]\s+)([a-z])/g, function (_, sep, letter) {
             return sep + letter.toUpperCase();
           });
+        }
+
+        function countWords(text) {
+          var trimmed = text.trim();
+          if (!trimmed) return 0;
+          return trimmed.split(/\s+/).filter(Boolean).length;
+        }
+
+        function updateCounts() {
+          var text = input.value || "";
+          wordCountEl.textContent = String(countWords(text));
+          charCountEl.textContent = String(text.length);
+          charCountNoSpacesEl.textContent = String(text.replace(/\s/g, "").length);
         }
 
         function showStatus(message, isError) {
@@ -227,20 +268,26 @@
           btn.addEventListener("click", function () {
             var raw = input.value;
             var action = btn.getAttribute("data-action");
+
             if (action === "clear") {
               input.value = "";
+              updateCounts();
               input.focus();
               showStatus("Text cleared.");
               return;
             }
+
             var out = raw;
             if (action === "uppercase") out = raw.toUpperCase();
             else if (action === "lowercase") out = raw.toLowerCase();
             else if (action === "title") out = toTitleCase(raw);
             else if (action === "sentence") out = toSentenceCase(raw);
             else if (action === "trim-spaces") out = raw.replace(/\s+/g, " ");
+
             input.value = out;
+            updateCounts();
             input.focus();
+
             if (action === "trim-spaces") {
               showStatus("Extra spaces removed.");
             } else {
@@ -265,19 +312,12 @@
             showStatus("Nothing to copy — add some text first.", true);
             return;
           }
+
           function done(ok) {
             if (ok) showCopyToast();
             else showStatus("Copy failed — select and copy manually (Ctrl+C).", true);
           }
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(function () {
-              done(true);
-            }).catch(function () {
-              fallbackCopy();
-            });
-          } else {
-            fallbackCopy();
-          }
+
           function fallbackCopy() {
             input.select();
             input.setSelectionRange(0, text.length);
@@ -287,7 +327,23 @@
               done(false);
             }
           }
+
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard
+              .writeText(text)
+              .then(function () {
+                done(true);
+              })
+              .catch(function () {
+                fallbackCopy();
+              });
+          } else {
+            fallbackCopy();
+          }
         });
+
+        input.addEventListener("input", updateCounts);
+        updateCounts();
       })();
     </script>
   </body>
